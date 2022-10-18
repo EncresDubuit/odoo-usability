@@ -9,20 +9,24 @@ class AccountJournal(models.Model):
     _inherit = 'account.journal'
 
     hide_bank_statement_balance = fields.Boolean(
-        string='Hide Bank Statement Balance',
-        help="You may want to enable this option when your bank "
-        "journal is generated from a bank statement file that "
-        "doesn't handle start/end balance (QIF for instance) and "
-        "you don't want to enter the start/end balance manually: it "
-        "will prevent the display of wrong information in the accounting "
-        "dashboard and on bank statements.")
-    # Used to set default user_type_id on account fields
-    account_type_current_liabilities_id = fields.Many2one(
-        'account.account.type',
-        default=lambda self: self.env.ref('account.data_account_type_current_liabilities').id)
+        string='Hide and Disable Bank Statement Balance',
+        help="When this option is enabled, the start and end balance is "
+        "not displayed on the bank statement form view, and the check of "
+        "the end balance vs the real end balance is disabled. When you enable "
+        "this option, you process the statement lines without considering "
+        "the start/end balance and you regularly check the accounting balance "
+        "of the bank account vs the amount of your bank account "
+        "(the 2 processes are managed separately)."
+        )
+    # Used to set default user_type_id on account fields via context
     account_type_current_assets_id = fields.Many2one(
         'account.account.type',
         default=lambda self: self.env.ref('account.data_account_type_current_assets').id)
+
+    # SQL constraint in the 'account' module: unique(code, name, company_id) !!!
+    _sql_constraints = [(
+        'code_unique', 'unique(code, company_id)',
+        'Another journal already has this code in this company!')]
 
     @api.depends(
         'name', 'currency_id', 'company_id', 'company_id.currency_id', 'code')
@@ -41,6 +45,22 @@ class AccountJournal(models.Model):
                     name = "%s (%s)" % (name, journal.currency_id.name)
                 res.append((journal.id, name))
             return res
+
+    def open_outstanding_payments(self):
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "account.action_account_moves_all")
+        action['domain'] = [
+            ('account_id', 'in', (self.payment_debit_account_id.id, self.payment_credit_account_id.id)),
+            ('journal_id', '=', self.id),
+            ('display_type', 'not in', ('line_section', 'line_note')),
+            ('parent_state', '!=', 'cancel'),
+            ]
+        action['context'] = {
+            'search_default_unreconciled': True,
+            'search_default_posted': True,
+            }
+        return action
 
 #    @api.constrains('default_credit_account_id', 'default_debit_account_id')
 #    def _check_account_type_on_bank_journal(self):

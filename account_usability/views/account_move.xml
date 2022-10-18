@@ -38,6 +38,9 @@
         <xpath expr="//field[@name='line_ids']/tree/field[@name='analytic_account_id']" position="attributes">
             <attribute name="optional">show</attribute>
         </xpath>
+        <xpath expr="//field[@name='line_ids']/tree/field[@name='currency_id']" position="attributes">
+            <attribute name="optional">show</attribute>
+        </xpath>
         <xpath expr="//field[@name='line_ids']/tree/field[@name='tax_tag_ids']" position="after">
             <field name="matching_number" optional="hide"/>
             <field name="reconcile_string" optional="show"/>
@@ -45,6 +48,16 @@
         <xpath expr="//field[@name='invoice_line_ids']/tree/field[@name='product_id']" position="after">
             <field name="product_barcode" optional="hide"/>
         </xpath>
+    </field>
+</record>
+
+<record id="view_invoice_tree" model="ir.ui.view">
+    <field name="model">account.move</field>
+    <field name="inherit_id" ref="account.view_invoice_tree"/>
+    <field name="arch" type="xml">
+        <field name="amount_residual_signed" position="attributes">
+            <attribute name="optional">show</attribute>
+        </field>
     </field>
 </record>
 
@@ -59,7 +72,13 @@
              <filter name="sent" string="Sent" domain="[('is_move_sent', '=', True), ('move_type', 'in', ('out_invoice', 'out_refund'))]"/>
             <separator/>
             <filter name="no_attachment" string="Missing Attachment" domain="[('has_attachment', '=', False)]"/>
-         </filter>
+        </filter>
+        <filter name="salesperson" position="before">
+            <filter name="commercial_partner_groupby" string="Commercial Partner" context="{'group_by': 'commercial_partner_id'}"/>
+        </filter>
+        <filter name="status" position="after">
+            <filter name="payment_state_groupby" string="Payment Status" context="{'group_by': 'payment_state'}"/>
+        </filter>
     </field>
 </record>
 
@@ -71,7 +90,7 @@
             <button title="View Journal Entry Form" type="object" name="show_account_move_form" icon="fa-arrow-right"/>
         </field>
         <field name="credit" position="after">
-            <field name="balance" sum="Balance" />
+            <field name="balance" sum="Balance" optional="show"/>
         </field>
     </field>
 </record>
@@ -91,16 +110,14 @@
             <field name="debit" filter_domain="['|', ('debit', '=', self), ('credit', '=', self)]" string="Debit or Credit"/>
         </field>
         <filter name="unreconciled" position="before">
-            <filter name="reconciled" string="Fully Reconciled" domain="[('reconciled', '=', True)]"/>
+            <filter name="reconciled" string="Fully Reconciled" domain="[('account_id.reconcile', '=', True), ('full_reconcile_id', '!=', False)]"/>
         </filter>
         <filter name="unreconciled" position="attributes">
             <attribute name="string">Unreconciled or Partially Reconciled</attribute>
-            <attribute name="domain">[('reconciled', '=', False), ('balance', '!=', 0), ('account_id.reconcile', '=', True)]</attribute>
         </filter>
-        <!--
         <field name="name" position="attributes">
-            <attribute name="string">Name or Reference</attribute>
-        </field>  -->
+            <attribute name="string">Label, Reference, Account or Partner</attribute>
+        </field>
         <field name="partner_id" position="attributes">
             <attribute name="domain">['|', ('parent_id', '=', False), ('is_company', '=', True)]</attribute>
         </field>

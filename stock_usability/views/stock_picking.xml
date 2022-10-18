@@ -28,6 +28,9 @@
         <xpath expr="//field[@name='move_ids_without_package']/tree/field[@name='product_uom_qty']" position="attributes">
             <attribute name="sum">1</attribute>
         </xpath>
+        <xpath expr="//field[@name='move_ids_without_package']/tree/field[@name='quantity_done']" position="attributes">
+            <attribute name="sum">1</attribute>
+        </xpath>
         <xpath expr="//field[@name='move_ids_without_package']/tree/field[@name='location_id']" position="replace"/>
         <xpath expr="//field[@name='move_ids_without_package']/tree/field[@name='location_dest_id']" position="replace"/>
         <xpath expr="//field[@name='move_ids_without_package']/tree/field[@name='name']" position="replace"/>
@@ -42,6 +45,16 @@
                 groups="stock.group_stock_user"
                 states="partially_available,assigned"
                 icon="fa-ban"/>
+        </xpath>
+        <xpath expr="//field[@name='move_ids_without_package']/form//field[@name='product_uom']" position="after">
+            <field name="location_id" groups="stock.group_stock_multi_locations" domain="[('id', 'child_of', 'parent.location_id')]"  options="{'no_create': True}"/>
+            <field name="location_dest_id" groups="stock.group_stock_multi_locations" domain="[('id', 'child_of', 'parent.location_dest_id')]"  options="{'no_create': True}"/>
+        </xpath>
+        <xpath expr="//sheet/group/group/field[@name='location_id']" position="attributes">
+            <attribute name="attrs">{}</attribute>
+        </xpath>
+        <xpath expr="//sheet/group/group/field[@name='location_dest_id']" position="attributes">
+            <attribute name="attrs">{}</attribute>
         </xpath>
     </field>
 </record>

@@ -10,11 +10,11 @@ class AccountBankStatement(models.Model):
     _inherit = 'account.bank.statement'
 
     start_date = fields.Date(
-        compute='_compute_dates', string='Start Date', readonly=True,
-        store=True)
+        compute='_compute_dates', string='Start Date', store=True)
     end_date = fields.Date(
-        compute='_compute_dates', string='End Date', readonly=True,
-        store=True)
+        compute='_compute_dates', string='End Date', store=True)
+    line_count = fields.Integer(
+        compute='_compute_dates', string='# of Lines', store=True)
     hide_bank_statement_balance = fields.Boolean(
         related='journal_id.hide_bank_statement_balance', readonly=True)
 
@@ -24,6 +24,7 @@ class AccountBankStatement(models.Model):
             dates = [line.date for line in st.line_ids]
             st.start_date = dates and min(dates) or False
             st.end_date = dates and max(dates) or False
+            st.line_count = len(dates)
 
     def _check_balance_end_real_same_as_computed(self):
         for stmt in self:
@@ -41,6 +42,13 @@ class AccountBankStatement(models.Model):
                 statement.end_date and format_date(self.env, statement.end_date) or '')
             res.append((statement.id, name))
         return res
+
+    def button_reopen(self):
+        self = self.with_context(skip_undo_reconciliation=True)
+        return super().button_reopen()
+
+    def button_undo_reconciliation(self):
+        self.line_ids.button_undo_reconciliation()
 
 
 class AccountBankStatementLine(models.Model):
@@ -88,3 +96,9 @@ class AccountBankStatementLine(models.Model):
             'res_id': self.move_id.id,
             })
         return action
+
+    def button_undo_reconciliation(self):
+        if self._context.get("skip_undo_reconciliation"):
+            return
+        else:
+            return super().button_undo_reconciliation()
